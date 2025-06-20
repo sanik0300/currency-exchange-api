@@ -21,6 +21,7 @@ namespace CurrencyExchangeAPI
             builder.Services.AddHostedService<RatesRefreshService>();
 
             builder.Services.AddScoped<IDbService, ApplicationDbServicePostgres>();
+            builder.Services.AddMemoryCache();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

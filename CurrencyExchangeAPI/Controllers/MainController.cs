@@ -1,6 +1,7 @@
 ﻿using CurrencyExchangeAPI.Infrastructure;
 using CurrencyExchangeAPI.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace CurrencyExchangeAPI.Controllers
 {
@@ -11,13 +12,19 @@ namespace CurrencyExchangeAPI.Controllers
         private readonly IDbService dbService;
         private readonly CurrencyInfoServiceOXR currencyInfoService;
         private readonly RatesServiceEXRAPI ratesService;
+        
+        private readonly IMemoryCache memoryCache;
+        private readonly string cacheKeyForRates;
 
-        public MainController(IDbService dbService, IServiceProvider isp)
+        public MainController(IDbService dbService, IServiceProvider isp, IMemoryCache memoryCache, IConfiguration conf)
         {
             this.dbService = dbService;
+            this.memoryCache = memoryCache;
 
             currencyInfoService = (CurrencyInfoServiceOXR)isp.GetService(typeof(CurrencyInfoServiceOXR));
             ratesService = (RatesServiceEXRAPI)isp.GetService(typeof(RatesServiceEXRAPI));
+
+            cacheKeyForRates = conf["CacheKeys:ExchangeRates"];
         }
 
         [HttpGet]
