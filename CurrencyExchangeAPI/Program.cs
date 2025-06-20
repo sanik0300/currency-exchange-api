@@ -18,7 +18,7 @@ namespace CurrencyExchangeAPI
                                 });
             builder.Services.AddHttpClient<CurrencyInfoServiceOXR>();
             builder.Services.AddHttpClient<RatesServiceEXRAPI>();
-
+            builder.Services.AddHostedService<RatesRefreshService>();
 
             builder.Services.AddScoped<IDbService, ApplicationDbServicePostgres>();
 

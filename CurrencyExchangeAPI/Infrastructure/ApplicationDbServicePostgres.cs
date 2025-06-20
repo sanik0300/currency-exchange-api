@@ -21,6 +21,7 @@ namespace CurrencyExchangeAPI.Infrastructure
         public ApplicationDbServicePostgres(IConfiguration configuration)
         {
             _dbConnection = new NpgsqlConnection(configuration["Data:Postgres:Main"]);
+            _dbConnection.Open();
         }
 
         public async Task<Currency?> GetCurrency(string code)
@@ -38,6 +39,17 @@ namespace CurrencyExchangeAPI.Infrastructure
             await _dbConnection.ExecuteAsync(sql, c);
         }
 
+        public async Task RefreshExchangeRates(IEnumerable<Exchange> rates)
+        {
+            using (IDbTransaction tran = _dbConnection.BeginTransaction()) 
+            {
+                await _dbConnection.ExecuteAsync("DELETE FROM exchanges;");
+
+                string sql2 = "INSERT INTO exchanges (base_code, price_code, rate, measured_at) VALUES (@BaseCode, @PriceCode, @Rate, @MeasuredAt)";
+                await _dbConnection.ExecuteAsync(sql2, rates);
+                tran.Commit();
+            }
+        }
         public async Task AddExchangeRates(IEnumerable<Exchange> rates)
         {
             string sql = "INSERT INTO exchanges (base_code, price_code, rate, measured_at) VALUES (@BaseCode, @PriceCode, @Rate, @MeasuredAt)";
@@ -56,6 +68,7 @@ namespace CurrencyExchangeAPI.Infrastructure
 
         public void Dispose()
         {
+            _dbConnection.Close();
             _dbConnection.Dispose();
         }
     }

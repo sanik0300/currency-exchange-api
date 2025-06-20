@@ -10,5 +10,6 @@
         Task AddCurrency(Currency c);
 
         Task AddExchangeRates(IEnumerable<Exchange> rates);
+        Task RefreshExchangeRates(IEnumerable<Exchange> rates);
     }
 }

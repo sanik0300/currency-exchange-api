@@ -175,6 +175,56 @@ namespace CurrencyExchangeApiTest.Unit
         }
 
         [Fact]
+        public async Task RefreshMatchingExchangesTest()
+        {
+            Currency[] testCurrencies = new Currency[3]
+            {
+                new Currency() { Code = "USD", Name="" },
+                new Currency() { Code = "GBP", Name="" },
+                new Currency() { Code = "BGN", Name="" }
+            };
+
+            DateTime dtBefore = DateTime.Now - TimeSpan.FromDays(1);
+
+            Exchange[] testExchanges1 = new Exchange[6]
+            {
+                new Exchange() { BaseCode="USD", PriceCode="GBP", Rate=0.7365, MeasuredAt=dtBefore },
+                new Exchange() { BaseCode="USD", PriceCode="BGN", Rate = 1.6912, MeasuredAt=dtBefore },
+
+                new Exchange() { BaseCode="GBP", PriceCode="USD", Rate=1.3471, MeasuredAt =dtBefore },
+                new Exchange() { BaseCode="GBP", PriceCode="BGN", Rate = 2.2905, MeasuredAt=dtBefore },
+
+                new Exchange() { BaseCode="BGN", PriceCode="GBP", Rate=0.4366, MeasuredAt=dtBefore },
+                new Exchange() { BaseCode="BGN", PriceCode="USD", Rate =0.5889, MeasuredAt=dtBefore }
+            };
+            await dbConnection.ExecuteAsync(insertCurrencyQuery, testCurrencies);
+            await dbConnection.ExecuteAsync(insertExchangeQuery, testExchanges1);
+
+            Exchange[] testExchanges2 = new Exchange[6]
+            {
+                new Exchange() { BaseCode="USD", PriceCode="GBP", Rate=0.7365, MeasuredAt=DateTime.Now },
+                new Exchange() { BaseCode="USD", PriceCode="BGN", Rate = 1.6912, MeasuredAt=DateTime.Now  },
+
+                new Exchange() { BaseCode="GBP", PriceCode="USD", Rate=1.3471, MeasuredAt=DateTime.Now  },
+                new Exchange() { BaseCode="GBP", PriceCode="BGN", Rate = 2.2905, MeasuredAt=DateTime.Now  },
+
+                new Exchange() { BaseCode="BGN", PriceCode="GBP", Rate=0.4366, MeasuredAt=DateTime.Now  },
+                new Exchange() { BaseCode="BGN", PriceCode="USD", Rate =0.5889, MeasuredAt=DateTime.Now  }
+            };
+
+            Exception exc = await Record.ExceptionAsync(async () => await dbService.RefreshExchangeRates(testExchanges2));
+
+            IEnumerable<Exchange> exchangesAfterRefresh = await dbConnection.QueryAsync<Exchange>("SELECT * FROM exchanges");
+
+            Assert.Null(exc);
+            Assert.Equal(6, exchangesAfterRefresh.Count());
+            foreach(Exchange ch in exchangesAfterRefresh)
+            {
+                Assert.True(ch.MeasuredAt > dtBefore);
+            }
+        }
+
+        [Fact]
         public async Task GetRatesForExistingCurrencyTest()
         {
             Currency[] testCurrencies = new Currency[3]
