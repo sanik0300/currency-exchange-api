@@ -3,6 +3,7 @@ using CurrencyExchangeAPI.Infrastructure;
 using CurrencyExchangeAPI.Models;
 using Dapper;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -11,7 +12,7 @@ using System.Data;
 using Xunit.Sdk;
 using static Dapper.SqlMapper;
 
-namespace CurrencyExchangeApiTest.Unit
+namespace CurrencyExchangeApiTest.Integration
 {
     public class RefreshBackgroundServiceTest : IClassFixture<WebApplicationFactory<Program>>, IDisposable
     {
@@ -60,8 +61,10 @@ namespace CurrencyExchangeApiTest.Unit
         {
             mockConfig.Setup(a => a["RefreshMinutes"]).Returns("1");
 
-            IServiceScopeFactory scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();    
-            RatesRefreshService refreshService = new RatesRefreshService(mockConfig.Object, scopeFactory);
+            IServiceScopeFactory scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();   
+            IMemoryCache cache = factory.Services.GetRequiredService<IMemoryCache>();
+
+            RatesRefreshService refreshService = new RatesRefreshService(mockConfig.Object, scopeFactory, cache);
 
             CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
             CancellationToken token = cancelTokenSource.Token;
@@ -93,7 +96,9 @@ namespace CurrencyExchangeApiTest.Unit
             mockConfig.Setup(a => a["RefreshMinutes"]).Returns(minutesInterval);
 
             IServiceScopeFactory scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
-            RatesRefreshService refreshService = new RatesRefreshService(mockConfig.Object, scopeFactory);
+            IMemoryCache cache = factory.Services.GetRequiredService<IMemoryCache>();
+
+            RatesRefreshService refreshService = new RatesRefreshService(mockConfig.Object, scopeFactory, cache);
 
             CancellationTokenSource cancelTokenSource = new CancellationTokenSource();
             CancellationToken token = cancelTokenSource.Token;

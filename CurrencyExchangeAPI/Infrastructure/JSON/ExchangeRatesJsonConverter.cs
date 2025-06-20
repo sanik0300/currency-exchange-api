@@ -35,7 +35,21 @@ namespace CurrencyExchangeAPI.Infrastructure
 
         public override void Write(Utf8JsonWriter writer, List<Exchange> value, JsonSerializerOptions options)
         {
-            throw new NotImplementedException();
+            writer.WriteStartArray();
+
+            foreach (Exchange exc in value)
+            {
+                writer.WriteStartObject();
+
+                writer.WriteString(nameof(exc.BaseCode), exc.BaseCode);
+                writer.WriteString(nameof(exc.PriceCode), exc.PriceCode);
+                writer.WriteNumber(nameof(exc.Rate), exc.Rate);
+                writer.WriteString(nameof(exc.MeasuredAt), exc.MeasuredAt);
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
         }
     }
 }
