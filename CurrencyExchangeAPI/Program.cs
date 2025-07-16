@@ -1,6 +1,7 @@
 
 using CurrencyExchangeAPI.Infrastructure;
 using CurrencyExchangeAPI.Models;
+using Serilog;
 
 namespace CurrencyExchangeAPI
 {
@@ -23,11 +24,19 @@ namespace CurrencyExchangeAPI
             builder.Services.AddScoped<IDbService, ApplicationDbServicePostgres>();
             builder.Services.AddMemoryCache();
 
+            string connStrPostgres = builder.Configuration["Data:Postgres:Main"],
+                   tableName = builder.Configuration["Data:Postgres:LogTableName"];
+
+            Log.Logger = new LoggerConfiguration().WriteTo
+                                      .PostgreSQL(connStrPostgres, tableName, needAutoCreateTable: true)
+                                      .CreateLogger();
+            builder.Host.UseSerilog(Log.Logger);
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-           
+
 
             var app = builder.Build();
 
@@ -42,6 +51,8 @@ namespace CurrencyExchangeAPI
             app.MapControllers();
 
             app.Run();
+
+            
         }
     }
 }

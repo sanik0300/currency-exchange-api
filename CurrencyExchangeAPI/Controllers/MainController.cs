@@ -18,10 +18,14 @@ namespace CurrencyExchangeAPI.Controllers
         private readonly IMemoryCache memoryCache;
         private readonly string cacheKeyForRates;
 
-        public MainController(IDbService dbService, IServiceProvider isp, IMemoryCache memoryCache, IConfiguration conf)
+        private readonly ILogger<MainController> logger;
+
+        public MainController(IDbService dbService, IServiceProvider isp, IMemoryCache memoryCache, 
+                              IConfiguration conf, ILogger<MainController> logger)
         {
             this.dbService = dbService;
             this.memoryCache = memoryCache;
+            this.logger = logger;
 
             currencyInfoService = (CurrencyInfoServiceOXR)isp.GetService(typeof(CurrencyInfoServiceOXR));
             ratesService = (RatesServiceEXRAPI)isp.GetService(typeof(RatesServiceEXRAPI));
