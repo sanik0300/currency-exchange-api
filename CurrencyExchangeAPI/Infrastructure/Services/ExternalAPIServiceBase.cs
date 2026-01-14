@@ -3,9 +3,10 @@ using System.Text.Json;
 
 namespace CurrencyExchangeAPI.Infrastructure
 {
-    public abstract class ExternalAPIServiceBase
+    public abstract partial class ExternalAPIServiceBase
     {
         protected readonly JsonSerializerOptions serializerOptions;
+        protected readonly ILogger logger;
         protected string apiKeyConfPath, baseUrlConfPath;
 
         protected string _apiKey { get; private set; }
@@ -18,10 +19,16 @@ namespace CurrencyExchangeAPI.Infrastructure
             _baseUrl = conf[baseUrlConfPath];
         }
 
-        protected ExternalAPIServiceBase(HttpClient client, IConfiguration conf)
+        protected ExternalAPIServiceBase(HttpClient client, IConfiguration conf, ILogger<ExternalAPIServiceBase> logger)
         {
             _httpClient = client;
             serializerOptions = new JsonSerializerOptions();
+            this.logger = logger;
+
+            LogServiceInitialization();
         }
+
+        [LoggerMessage(40, LogLevel.Debug, "Initialized external integration service")]
+        partial void LogServiceInitialization();
     }
 }

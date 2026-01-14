@@ -9,7 +9,7 @@ namespace CurrencyExchangeAPI.Controllers
 {
     [ApiController]
     [Route("/")]
-    public class MainController : ControllerBase
+    public partial class MainController : ControllerBase
     {
         private readonly IDbService dbService;
         private readonly CurrencyInfoServiceOXR currencyInfoService;
@@ -41,8 +41,11 @@ namespace CurrencyExchangeAPI.Controllers
 
             if(!allInDb.Any())
             {
+                LogNoCurrenciesRetrieved();
                 return NoContent();
             }
+
+            LogCurrenciesRetrieval(allInDb.Count);
             return new JsonResult(allInDb);
         }
 
@@ -56,11 +59,13 @@ namespace CurrencyExchangeAPI.Controllers
             Currency? requested = allInDb.FirstOrDefault(x => x.Code == code);
             if (requested == null)
             {
+                LogSavedCurrencyNotFound(code);
                 return NotFound();
             }
 
             if(allInDb.Count == 1)
             {
+                LogOnlyOneCurrency(code);
                 return BadRequest($"The requested currency is the only one in the available list. Add more to request exchange rates between them.");
             }
 
@@ -72,6 +77,7 @@ namespace CurrencyExchangeAPI.Controllers
 
                 if(_basedOnRequested.Count == allInDb.Count-1)
                 {
+                    LogRatesRetrieved(code, "cache");
                     return new JsonResult(_basedOnRequested);
                 }
             }
@@ -89,6 +95,7 @@ namespace CurrencyExchangeAPI.Controllers
                 memoryCache.Set(cacheKeyForRates, partialCacheUpd);
             }
 
+            LogRatesRetrieved(code, "external API");
             return new JsonResult(fromExtApiWithoutSelf.ToList());
         }
 
@@ -101,6 +108,7 @@ namespace CurrencyExchangeAPI.Controllers
 
             if(alreadyExisting!=null)
             {
+                LogAlreadySaved(code);
                 return new ObjectResult($"Currency with the code {code} ({alreadyExisting.Name}) already present in the list.") { 
                     StatusCode = (int)HttpStatusCode.MethodNotAllowed
                 };
@@ -112,20 +120,53 @@ namespace CurrencyExchangeAPI.Controllers
             }
             catch(KeyNotFoundException e)
             {
+                LogDoesNotExist(code);
                 return NotFound(e.Message);
             }
 
             List<Currency> otherCurrencies = await dbService.GetAllCurrencies();
 
+            LogCurrencySaved(code, otherCurrencies.Count + 1);
             await dbService.AddCurrency(result);
 
             if (otherCurrencies.Any())
             {
+                LogRatesSaved(code, otherCurrencies.Count);
                 List<Exchange> exchangeRatesBasedOnNew = await ratesService.GetRatesFor(result.Code, otherCurrencies);
                 await dbService.AddExchangeRates(exchangeRatesBasedOnNew);
             }
 
-            return Ok($"Now there are {otherCurrencies.Count+1} currencies available");
+            return NoContent();
         }
+
+        [LoggerMessage(100, LogLevel.Information, "Retrieved a list of saved currencies, with {Count} entries")]
+        partial void LogCurrenciesRetrieval(int Count);
+
+        [LoggerMessage(101, LogLevel.Warning, "Asked for a list of saved currencies, but there are no entries")]
+        partial void LogNoCurrenciesRetrieved();
+
+
+        [LoggerMessage(200, LogLevel.Information, "Retrieved exchange rates for currency {BaseCode} from {Source}")]
+        partial void LogRatesRetrieved(string BaseCode, string Source);
+
+        [LoggerMessage(201, LogLevel.Warning, "Currency with a code {Code} not found among saved entries, cannot retrieve rates")]
+        partial void LogSavedCurrencyNotFound(string Code);
+
+        [LoggerMessage(202, LogLevel.Warning, "Currency with a code {Code} is the only one saved, cannot retrieve rates")]
+        partial void LogOnlyOneCurrency(string Code);
+
+
+        [LoggerMessage(300, LogLevel.Information, "Currency {Code} info saved, now there are {NewCount} entries")]
+        partial void LogCurrencySaved(string Code, int NewCount);
+
+        [LoggerMessage(301, LogLevel.Warning, "Asked to save currency {Code}, but it already exists in app data")]
+        partial void LogAlreadySaved(string Code);
+
+        [LoggerMessage(302, LogLevel.Error, "Not found info about currency with a code {Code} at the external API")]
+        partial void LogDoesNotExist(string Code);
+
+
+        [LoggerMessage(310, LogLevel.Information, "Saved exchange rates of {BaseCode} to {Count} other saved currencies")]
+        partial void LogRatesSaved(string BaseCode, int Count);
     }
 }

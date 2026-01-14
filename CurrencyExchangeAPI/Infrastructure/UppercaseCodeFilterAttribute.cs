@@ -5,7 +5,7 @@ using Microsoft.Extensions.Primitives;
 namespace CurrencyExchangeAPI.Infrastructure
 {
     [AttributeUsage(AttributeTargets.Method)]
-    public class UppercaseCodeFilterAttribute : Attribute, IResourceFilter
+    public partial class UppercaseCodeFilterAttribute : Attribute, IResourceFilter
     {
         public void OnResourceExecuted(ResourceExecutedContext context) { }
 
@@ -15,12 +15,18 @@ namespace CurrencyExchangeAPI.Infrastructure
 
             if (!string.IsNullOrEmpty(codeValue))
             {
-                Dictionary<string, StringValues> queryParams = new Dictionary<string, StringValues>()
+                string upperCode = codeValue.ToUpper();
+                if (codeValue != upperCode)
                 {
-                    { "code", codeValue.ToUpper() }
-                };
+                    Dictionary<string, StringValues> queryParams = new Dictionary<string, StringValues>()
+                    {
+                        { "code", codeValue.ToUpper() }
+                    };
+                    context.HttpContext.Request.Query = new QueryCollection(queryParams);
 
-                context.HttpContext.Request.Query = new QueryCollection(queryParams);
+                    ILogger? logger = context.HttpContext.RequestServices.GetService<ILogger>();
+                    logger?.LogInformation(30, "Changed input currency code {OldCode} to upper case: {Code}", codeValue, upperCode);
+                }
             }
         }
     }

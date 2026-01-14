@@ -1,23 +1,24 @@
-﻿
-using CurrencyExchangeAPI.Models;
+﻿using CurrencyExchangeAPI.Models;
 using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
-using System.Runtime.InteropServices.Marshalling;
 
 namespace CurrencyExchangeAPI.Infrastructure
 {
-    public class RatesRefreshService : BackgroundService
+    public partial class RatesRefreshService : BackgroundService
     {
         private readonly TimeSpan refreshInterval;
 
         private readonly IServiceScopeFactory serviceFactory;
         private readonly IMemoryCache memoryCache;
+        private readonly ILogger<RatesRefreshService> logger;
+
         private readonly string cacheKeyForRates;
 
-        public RatesRefreshService(IConfiguration conf, IServiceScopeFactory serviceFactory, IMemoryCache memoryCache)
+        public RatesRefreshService(IConfiguration conf, IServiceScopeFactory serviceFactory, IMemoryCache memoryCache, ILogger<RatesRefreshService> logger)
         {
             this.serviceFactory = serviceFactory;
             this.memoryCache = memoryCache;
+            this.logger = logger;
 
             string minutes = conf["RefreshMinutes"];
             refreshInterval = TimeSpan.FromMinutes(Convert.ToInt32(minutes));
@@ -33,13 +34,16 @@ namespace CurrencyExchangeAPI.Infrastructure
                 {
                     using (IServiceScope scope = serviceFactory.CreateScope())
                     {
-                        Debug.WriteLine($"{DateTime.Now} logged");
+                        LogIteration();
 
                         IDbService dbService = scope.ServiceProvider.GetRequiredService<IDbService>();
                         List<Currency> availableCurrencies = await dbService.GetAllCurrencies();
 
-                        if(availableCurrencies.Count < 2) { continue; }
-
+                        if(availableCurrencies.Count < 2) 
+                        {
+                            LogNoNeedToCache();
+                            continue; 
+                        }
 
                         RatesServiceEXRAPI ratesApiService = scope.ServiceProvider.GetRequiredService<RatesServiceEXRAPI>();
 
@@ -59,9 +63,20 @@ namespace CurrencyExchangeAPI.Infrastructure
 
                         await dbService.RefreshExchangeRates(exchangesGoingToDb);
                         memoryCache.Set(cacheKeyForRates, exchangesGoingToDb, entryOptions);
+                        
+                        LogRatesCaching(exchangesGoingToDb.Count);
                     }
                 }
             }
         }
+
+        [LoggerMessage(70, LogLevel.Debug, "Exchange rates caching service iteration")]
+        partial void LogIteration();
+
+        [LoggerMessage(80, LogLevel.Information, "Cached {Count} entries of exchange rates")]
+        partial void LogRatesCaching(int Count);
+
+        [LoggerMessage(81, LogLevel.Warning, "Less than 2 currency entries are saved, no rates between them to cache")]
+        partial void LogNoNeedToCache();
     }
 }

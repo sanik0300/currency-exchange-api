@@ -6,9 +6,10 @@ using Dapper.FluentMap;
 
 namespace CurrencyExchangeAPI.Infrastructure
 {
-    public sealed class ApplicationDbServicePostgres : IDbService, IDisposable
+    public sealed partial class ApplicationDbServicePostgres : IDbService, IDisposable
     {
         private readonly IDbConnection _dbConnection;
+        private readonly ILogger logger;
 
         static ApplicationDbServicePostgres()
         {
@@ -18,10 +19,14 @@ namespace CurrencyExchangeAPI.Infrastructure
             });
         }
 
-        public ApplicationDbServicePostgres(IConfiguration configuration)
+        public ApplicationDbServicePostgres(IConfiguration configuration, ILogger<ApplicationDbServicePostgres> logger)
         {
+            this.logger = logger;
+
             _dbConnection = new NpgsqlConnection(configuration["Data:Postgres:Main"]);
             _dbConnection.Open();
+            
+            LogServiceStart();
         }
 
         public async Task<Currency?> GetCurrency(string code)
@@ -70,6 +75,14 @@ namespace CurrencyExchangeAPI.Infrastructure
         {
             _dbConnection.Close();
             _dbConnection.Dispose();
+
+            LogServiceClosure();
         }
+
+        [LoggerMessage(10, LogLevel.Debug, "Service started and DB connection opened")]
+        partial void LogServiceStart();
+
+        [LoggerMessage(20, LogLevel.Debug, "DB connection closed and service stopped")]
+        partial void LogServiceClosure();
     }
 }

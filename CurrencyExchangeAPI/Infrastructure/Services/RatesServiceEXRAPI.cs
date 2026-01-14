@@ -5,9 +5,9 @@ using System.Text.Json.Nodes;
 
 namespace CurrencyExchangeAPI.Infrastructure
 {
-    public class RatesServiceEXRAPI : ExternalAPIServiceBase
+    public partial class RatesServiceEXRAPI : ExternalAPIServiceBase
     {
-        public RatesServiceEXRAPI(HttpClient client, IConfiguration conf) : base(client, conf)
+        public RatesServiceEXRAPI(HttpClient client, IConfiguration conf, ILogger<RatesServiceEXRAPI> logger) : base(client, conf, logger)
         {
             apiKeyConfPath = "API:ExchangeRate-API:Key";
             baseUrlConfPath = "API:ExchangeRate-API:BasePath";
@@ -29,6 +29,8 @@ namespace CurrencyExchangeAPI.Infrastructure
                 throw new KeyNotFoundException($"Currency code {code} is unknown!");
             }
 
+            LogRatesAPI(code);
+
             DateTime savedGetTime = DateTime.Now;
 
             JsonNode resultNode;
@@ -48,5 +50,8 @@ namespace CurrencyExchangeAPI.Infrastructure
             }
             return exclusiveExchanges;
         }
+
+        [LoggerMessage(60, LogLevel.Information, "Obtained a list of all exchange rates of currency {Code} from external API call")]
+        partial void LogRatesAPI(string Code);
     }
 }

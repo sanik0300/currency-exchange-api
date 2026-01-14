@@ -5,9 +5,9 @@ using System.Text.Json;
 
 namespace CurrencyExchangeAPI.Infrastructure
 {
-    public class CurrencyInfoServiceOXR : ExternalAPIServiceBase
+    public partial class CurrencyInfoServiceOXR : ExternalAPIServiceBase
     {
-        public CurrencyInfoServiceOXR(HttpClient client, IConfiguration conf) : base(client, conf)
+        public CurrencyInfoServiceOXR(HttpClient client, IConfiguration conf, ILogger<CurrencyInfoServiceOXR> logger) : base(client, conf, logger)
         {
             apiKeyConfPath = "API:OpenExchangeRates:Key";
             baseUrlConfPath = "API:OpenExchangeRates:BasePath";
@@ -23,6 +23,8 @@ namespace CurrencyExchangeAPI.Infrastructure
             string url = $"currencies.json?app_id={_apiKey}";
 
             HttpResponseMessage responseMessage = await _httpClient.GetAsync(url);
+            
+            LogCurrenciesAPI();
 
             List<Currency> currenciesOnline;
             using (Stream content = await responseMessage.Content.ReadAsStreamAsync())
@@ -39,5 +41,8 @@ namespace CurrencyExchangeAPI.Infrastructure
 
             return result;
         }
+
+        [LoggerMessage(50, LogLevel.Information, "Obtained a list of all possible currencies from external API call")]
+        partial void LogCurrenciesAPI();
     }
 }
