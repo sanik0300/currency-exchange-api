@@ -3,6 +3,7 @@ using Npgsql;
 using System.Data;
 using Dapper;
 using Dapper.FluentMap;
+using Microsoft.Extensions.Options;
 
 namespace CurrencyExchangeAPI.Infrastructure
 {
@@ -19,11 +20,11 @@ namespace CurrencyExchangeAPI.Infrastructure
             });
         }
 
-        public ApplicationDbServicePostgres(IConfiguration configuration, ILogger<ApplicationDbServicePostgres> logger)
+        public ApplicationDbServicePostgres(IOptions<HostingSettings> options, ILogger<ApplicationDbServicePostgres> logger)
         {
             this.logger = logger;
 
-            _dbConnection = new NpgsqlConnection(configuration["Data:Postgres:Main"]);
+            _dbConnection = new NpgsqlConnection(options.Value.ConnectionString);
             _dbConnection.Open();
             
             LogServiceStart();

@@ -1,4 +1,3 @@
-
 using CurrencyExchangeAPI.Infrastructure;
 using CurrencyExchangeAPI.Models;
 using Microsoft.Extensions.Logging.Console;
@@ -24,8 +23,11 @@ namespace CurrencyExchangeAPI
             builder.Services.AddScoped<IDbService, ApplicationDbServicePostgres>();
             builder.Services.AddMemoryCache();
 
-            string connStrPostgres = builder.Configuration["Data:Postgres:Main"],
-                   tableName = builder.Configuration["Data:Postgres:LogTableName"];
+            bool isInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+            string lastSectionName = isInContainer ? "Docker" : "Main";
+            builder.Services.Configure<HostingSettings>(
+                builder.Configuration.GetSection("Data:Postgres:" + lastSectionName)
+            );
 
             builder.Logging.AddSimpleConsole(options =>
             {
@@ -47,6 +49,7 @@ namespace CurrencyExchangeAPI
             app.MapControllers();
 
             app.Logger.LogInformation("Application has started");
+            app.Logger.LogInformation("If Docker detected: {IsDocker}", isInContainer);
 
             app.Run();
 
