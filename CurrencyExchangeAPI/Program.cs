@@ -1,6 +1,8 @@
 using CurrencyExchangeAPI.Infrastructure;
+using CurrencyExchangeAPI.Infrastructure.Logging;
 using CurrencyExchangeAPI.Models;
 using Microsoft.Extensions.Logging.Console;
+using System.Reflection;
 
 namespace CurrencyExchangeAPI
 {
@@ -29,10 +31,25 @@ namespace CurrencyExchangeAPI
                 builder.Configuration.GetSection("Data:Postgres:" + lastSectionName)
             );
 
-            builder.Logging.AddSimpleConsole(options =>
+            if (isInContainer)
             {
-                options.ColorBehavior = LoggerColorBehavior.Enabled;
-            });
+                builder.Logging.AddSimpleConsole(options =>
+                {
+                    options.ColorBehavior = LoggerColorBehavior.Enabled;
+                });
+            }
+            else
+            {
+                string textFilePath = builder.Configuration["Logging:FileDestination"]!.ToString();
+
+                if (!Path.IsPathRooted(textFilePath))
+                {
+                    textFilePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "", textFilePath);
+                }
+
+                builder.Logging.AddProvider(new TextFileLoggerProvider(textFilePath));
+            }
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -48,8 +65,7 @@ namespace CurrencyExchangeAPI
             app.UseAuthorization();
             app.MapControllers();
 
-            app.Logger.LogInformation("Application has started");
-            app.Logger.LogInformation("If Docker detected: {IsDocker}", isInContainer);
+            app.Logger.LogInformation("Application has started\nIf Docker detected: {IsDocker}", isInContainer);
 
             app.Run();
 
